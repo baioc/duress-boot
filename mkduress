@@ -12,7 +12,7 @@ case "$ACTION" in
 	*) echo "Action must be one of { boot }" 1>&2 ; exit 1 ;;
 esac
 
-SALT=$(head -c 16 /dev/urandom | xxd -p)
+SALT=$(head -c 16 /dev/urandom | base64)
 
 printf 'Password: ' 1>&2
 stty -echo
@@ -23,4 +23,4 @@ echo 1>&2 # add newline because enter pressed after password is not echoed
 HASH=$(printf '%s%s' "$SALT" "$PASSWORD" | sha256sum | cut -d' ' -f1)
 unset PASSWORD
 
-printf 'sha256,%s,%s,%s\n' "$SALT" "$HASH" "$OPTIONS"
+printf 'v1,%s,%s,%s\n' "$SALT" "$HASH" "$OPTIONS"
