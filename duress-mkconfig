@@ -23,4 +23,4 @@ echo 1>&2 # add newline because enter pressed after password is not echoed
 HASH=$(printf '%s%s' "$SALT" "$PASSWORD" | sha256sum | cut -d' ' -f1)
 unset PASSWORD
 
-printf 'v1,%s,%s,%s\n' "$SALT" "$HASH" "$OPTIONS"
+printf 'v1,%s,%s,%s,%s\n' "$SALT" "$HASH" "$ACTION" "$OPTIONS"
