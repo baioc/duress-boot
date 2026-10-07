@@ -1,0 +1,131 @@
+#!/usr/bin/ash
+
+msg() {
+	echo "$@"
+}
+
+err() {
+	echo "ERROR: $*"
+}
+
+startswith() {
+	local word="$1" prefix="$2"
+	case "$word" in
+		$prefix*)
+			return 0
+			;;
+	esac
+	return 1
+}
+
+endswith() {
+	local word="$1" suffix="$2"
+	case "$word" in
+		*$suffix)
+			return 0
+			;;
+	esac
+	return 1
+}
+
+parse_cmdline_item() {
+	local key="$1" value="$2"
+	case "$key" in
+		rw | ro)
+			rwopt="$key"
+			;;
+		fstype)
+			rootfstype="$value"
+			;;
+		fsck.mode)
+			case "$value" in
+				force)
+					forcefsck=y
+					;;
+				skip)
+					fastboot=y
+					;;
+				*)
+					err "unknown fsck.mode parameter: '$value'"
+					;;
+			esac
+			;;
+		rd.debug)
+			rd_debug=y
+			;;
+		[![:alpha:]_]* | [[:alpha:]_]*[![:alnum:]_]*)
+			# invalid shell variable, ignore it
+			;;
+		*)
+			# valid shell variable
+			eval "$key"='${value:-y}'
+			;;
+	esac
+}
+
+process_cmdline_param() {
+	local item_callback="$1" key="$2" value="$3"
+
+	if startswith "$value" "[\"']" && endswith "$value" "${value:0:1}"; then
+		value="${value#?}" value="${value%?}"
+	fi
+
+	"$item_callback" "$key" "$value"
+}
+
+parse_cmdline() {
+	local item_callback="${1:-parse_cmdline_item}"
+	local cmdline word quoted='' key='' value=''
+
+	set -f
+	read -r cmdline
+	# shellcheck disable=SC2086
+	set -- $cmdline
+	set +f
+
+	for word; do
+		if [ -n "$quoted" ]; then
+			value="$value $word"
+		else
+			case "$word" in
+				*=*)
+					key="${word%%=*}"
+					value="${word#*=}"
+
+					if startswith "$value" "[\"']"; then
+						# busybox ash supports string indexing
+						# shellcheck disable=SC3057
+						quoted="${value:0:1}"
+					fi
+					;;
+				'#'*)
+					break
+					;;
+				*)
+					key="$word"
+					;;
+			esac
+		fi
+
+		if [ -n "$quoted" ]; then
+			if endswith "$value" "$quoted"; then
+				unset quoted
+			else
+				continue
+			fi
+		fi
+
+		process_cmdline_param "$item_callback" "$key" "$value"
+		key=''
+		value=''
+	done
+
+	if [ -n "$key" ]; then
+		process_cmdline_param "$item_callback" "$key" "$value"
+	fi
+}
+
+resolve_device() {
+	echo "$1"
+	return 0
+}
