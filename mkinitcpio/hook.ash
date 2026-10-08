@@ -1,5 +1,6 @@
 #!/usr/bin/ash
 
+
 run_hook() {
 	local password retry line linenumber
 	local version salt hash action options
@@ -61,13 +62,16 @@ duress_v1() {
 		return 1
 	fi
 
+	# except for a successful boot, every action must return 1
+	# so that the outer loop will keep going (until either boot or exhaustion)
 	case "$action" in
 		boot)
-			parse_cmdline <<EOF
-$options
-EOF
-			luks_decrypt "$password"
+			luks_decrypt "$password" "$options"
 			return $?
+			;;
+		wipe)
+			luks_wipe "$options"
+			return 1
 			;;
 		*)
 			msg "Ignoring unimplemented duress action '$action' ..."
@@ -78,9 +82,16 @@ EOF
 
 
 luks_decrypt() {
-	local password="$1"
+	local password="$1" options="$2"
 	local cryptdev cryptname cryptoptions
 	local cryptargs='' resolved
+
+	# defined in /usr/lib/initcpio/init_functions, and called in init, this
+	# function exports variables parsed from the kernel cmdline. we do the same
+	# here to avoid reimplementing that parsing, and to override with $options
+	parse_cmdline <<EOF
+$options
+EOF
 
 	IFS=: read cryptdev cryptname cryptoptions <<EOF
 $cryptdevice
@@ -114,6 +125,40 @@ EOF
 		return $?
 	else
 		err "Failed to open non-LUKS-device '$cryptdev'."
+		return 1
+	fi
+}
+
+
+luks_wipe() {
+	local options="$1"
+	local opt key val
+	local cryptdevice resolved
+
+	set -- $options
+	for opt; do
+		case "$opt" in
+			*=*)
+				key="${opt%%=*}"
+				val="${opt#*=}"
+				;;
+			*)
+				key="$opt"
+				val=''
+				;;
+		esac
+		case "$key" in
+			cryptdevice) cryptdevice=$(echo "$val" | cut -d':' -f1) ;;
+			*) ;; # ignore unknown options in silence
+		esac
+	done
+
+	if resolved=$(resolve_device "$cryptdevice") \
+	&& echo cryptsetup isLuks "$resolved" > /dev/null 2>&1 \
+	&& echo cryptsetup erase -q "$resolved"; then
+		return 0
+	else
+		# always fail silently since our target may have already been wiped
 		return 1
 	fi
 }

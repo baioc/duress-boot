@@ -8,8 +8,8 @@ shift
 OPTIONS="$@"
 
 case "$ACTION" in
-	boot) ;;
-	*) echo "Action must be one of { boot }" >&2 ; exit 1 ;;
+	boot|wipe) ;;
+	*) echo "Action must be one of { boot, wipe }" >&2 ; exit 1 ;;
 esac
 
 SALT=$(head -c 16 /dev/urandom | base64)
