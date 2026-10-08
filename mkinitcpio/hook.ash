@@ -120,6 +120,10 @@ EOF
 	done
 	IFS="$OLDIFS"
 
+	if [ "${duress_verbose:-n}" = 'y' ]; then
+		msg "Decrypting LUKS device '$cryptdev' ..."
+	fi
+
 	if resolved=$(resolve_device "$cryptdev") && echo cryptsetup isLuks "$resolved" > /dev/null 2>&1; then
 		printf '%s' "$password" | echo cryptsetup open --type luks --key-file - "$resolved" "$cryptname" "$cryptargs"
 		return $?
@@ -132,8 +136,7 @@ EOF
 
 luks_wipe() {
 	local options="$1"
-	local opt key val
-	local cryptdevice resolved
+	local opt key val cryptdevice resolved verbose=n
 
 	set -- $options
 	for opt; do
@@ -149,16 +152,20 @@ luks_wipe() {
 		esac
 		case "$key" in
 			cryptdevice) cryptdevice=$(echo "$val" | cut -d':' -f1) ;;
+			duress_verbose) verbose="${val:-y}" ;;
 			*) ;; # ignore unknown options in silence
 		esac
 	done
 
+	if [ "$verbose" = 'y' ]; then msg "Wiping LUKS device '$cryptdevice' ..."; fi
+
 	if resolved=$(resolve_device "$cryptdevice") \
 	&& echo cryptsetup isLuks "$resolved" > /dev/null 2>&1 \
 	&& echo cryptsetup erase -q "$resolved"; then
+		if [ "$verbose" = 'y' ]; then msg "Wiped LUKS device '$cryptdevice'."; fi
 		return 0
 	else
-		# always fail silently since our target may have already been wiped
+		if [ "$verbose" = 'y' ]; then err "Failed to wipe LUKS device '$cryptdevice'."; fi
 		return 1
 	fi
 }
