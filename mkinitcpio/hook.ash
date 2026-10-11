@@ -2,10 +2,11 @@
 
 
 run_hook() {
+	local DURESS_CONF_PATH="${DURESS_CONF_PATH:-/etc/duress.conf}"
 	local password retry line linenumber
 	local version salt hash action options
 
-	echo modprobe -a -q dm-crypt > /dev/null 2>&1
+	modprobe -a -q dm-crypt > /dev/null 2>&1
 	# TODO: plymouth prompts
 
 	retry=1
@@ -38,8 +39,7 @@ run_hook() {
 					continue
 					;;
 			esac
-		done < ./duress.conf
-		# TODO: replace with /etc/duress.conf
+		done < $DURESS_CONF_PATH
 
 		echo -n 'Retry [y/N] ? '
 		read -r retry
@@ -124,8 +124,11 @@ EOF
 		msg "Decrypting LUKS device '$cryptdev' ..."
 	fi
 
-	if resolved=$(resolve_device "$cryptdev") && echo cryptsetup isLuks "$resolved" > /dev/null 2>&1; then
-		printf '%s' "$password" | echo cryptsetup open --type luks --key-file - "$resolved" "$cryptname" "$cryptargs"
+	if resolved=$(resolve_device "$cryptdev") \
+	   && cryptsetup isLuks "$resolved" > /dev/null 2>&1;
+	then
+		printf '%s' "$password" \
+		| cryptsetup open --type luks --key-file - "$resolved" "$cryptname" "$cryptargs"
 		return $?
 	else
 		err "Failed to open non-LUKS-device '$cryptdev'."
@@ -160,8 +163,9 @@ luks_wipe() {
 	if [ "$verbose" = 'y' ]; then msg "Wiping LUKS device '$cryptdevice' ..."; fi
 
 	if resolved=$(resolve_device "$cryptdevice") \
-	&& echo cryptsetup isLuks "$resolved" > /dev/null 2>&1 \
-	&& echo cryptsetup erase -q "$resolved"; then
+	   && cryptsetup isLuks "$resolved" > /dev/null 2>&1 \
+	   && cryptsetup erase -q "$resolved";
+	then
 		if [ "$verbose" = 'y' ]; then msg "Wiped LUKS device '$cryptdevice'."; fi
 		return 0
 	else

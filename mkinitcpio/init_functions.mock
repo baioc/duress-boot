@@ -125,7 +125,17 @@ parse_cmdline() {
 	fi
 }
 
+# these are mocks
+
 resolve_device() {
 	echo "$1"
 	return 0
+}
+
+cryptsetup() {
+	echo "cryptsetup $@"
+}
+
+modprobe() {
+	echo "modprobe $@"
 }
