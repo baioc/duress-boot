@@ -1,5 +1,8 @@
 #!/usr/bin/ash
 
+# Copied from mkinitcpio (https://gitlab.archlinux.org/archlinux/mkinitcpio/mkinitcpio)
+# for the sake of testing our custom hooks locally with no external dependencies
+
 msg() {
 	echo "$@"
 }

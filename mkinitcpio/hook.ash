@@ -1,5 +1,8 @@
 #!/usr/bin/ash
 
+# Copyright (C) 2026 Gabriel B. Sant'Anna
+# SPDX-License-Identifier: GPL-2.0-only
+
 
 run_hook() {
 	local DURESS_CONF_PATH="${DURESS_CONF_PATH:-/etc/duress.conf}"
@@ -97,6 +100,7 @@ EOF
 $cryptdevice
 EOF
 
+	# this snippet is copied from mkinitcpio for the sake of compatibility
 	OLDIFS="$IFS"
 	IFS=','
 	for cryptopt in $cryptoptions; do
