@@ -159,7 +159,7 @@ luks_wipe() {
 		esac
 		case "$key" in
 			cryptdevice) cryptdevice=$(echo "$val" | cut -d':' -f1) ;;
-			duress_verbose) verbose="${val:-y}" ;;
+			duress_verbose) verbose="${val:-n}" ;;
 			*) ;; # ignore unknown options in silence
 		esac
 	done
