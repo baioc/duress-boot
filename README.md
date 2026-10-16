@@ -6,6 +6,8 @@ This allows users to set a **kill-switch password** which, once entered during t
 
 Unlike the original duress pin implementation, this one **can be configured to boot into a decoy OS** (both as an alternative or in addition to erasing the cryptographic keys from another partition), again **depending on what password was typed in**.
 
+![duress-boot full demo](https://www.baioc.dev/duress-boot/assets/duress/duress-demo-reboot.gif)
+
 The initial implementation is based on Arch's [mkinitcpio](https://gitlab.archlinux.org/archlinux/mkinitcpio/mkinitcpio), but we plan on adding support for the initramfs generation tools and initrd scripts used in other distros as well.
 
 
