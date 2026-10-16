@@ -10,7 +10,6 @@ run_hook() {
 	local version salt hash action options
 
 	modprobe -a -q dm-crypt > /dev/null 2>&1
-	# TODO: plymouth prompts
 
 	retry=1
 	while [ "$retry" -eq 1 ]; do
