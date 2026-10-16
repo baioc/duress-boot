@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+
+    <title></title>
+    <link rel="stylesheet" href="dist/reset.css">
+    <link rel="stylesheet" href="dist/reveal.css" />
+    <link rel="stylesheet" href="css/slides-extended.css" />
+    <link rel="stylesheet" href="dist/theme/dracula.css" id="theme" />
+    <link rel="stylesheet" href="plugin/highlight/zenburn.css" />
+    <link rel="stylesheet" href="plugin/customcontrols/style.css">
+
+    <link rel="stylesheet" href="plugin/reveal-pointer/pointer.css" />
+
+
+    <script defer src="dist/fontawesome/all.min.js"></script>
+
+    <script type="text/javascript">
+        function pageInIframe() {
+            return (window.location !== window.parent.location);
+        }
+
+        let forgetPop = true;
+        function onPopState(event) {
+            if(forgetPop){
+                forgetPop = false;
+            } else if( pageInIframe()) {
+                parent.postMessage(event.target.location.href, "app://obsidian.md");
+            }
+        }
+        window.onpopstate = onPopState;
+        window.onmessage = event => {
+            if(event.data == "reload"){
+                window.document.location.reload();
+            }
+            forgetPop = true;
+        }
+
+        function fitElements() {
+            const itemsToFit = document.getElementsByClassName('fitText');
+            for (const item in itemsToFit) {
+                if (Object.hasOwnProperty.call(itemsToFit, item)) {
+                    const element = itemsToFit[item];
+                    fitElement(element, 1, 1000);
+                    element.classList.remove('fitText');
+                }
+            }
+        }
+
+        function fitElement(element, start, end) {
+
+            let size = (end + start) / 2;
+            element.style.fontSize = `${size}px`;
+
+            if (Math.abs(start - end) < 1) {
+                while (element.scrollHeight > element.offsetHeight) {
+                    size--;
+                    element.style.fontSize = `${size}px`;
+                }
+                return;
+            }
+
+            if (element.scrollHeight > element.offsetHeight) {
+                fitElement(element, start, size);
+            } else {
+                fitElement(element, size, end);
+            }
+        }
+
+        document.onreadystatechange = () => {
+            fitElements();
+            if (document.readyState === 'complete') {
+                if (pageInIframe() && window.location.href.indexOf("?export") != -1){
+                    parent.postMessage(event.target.location.href, "app://obsidian.md");
+                }
+                if (window.location.href.indexOf("print-pdf") != -1){
+                    let stateCheck = setInterval(() => {
+                        clearInterval(stateCheck);
+                        window.print();
+                    }, 250);
+                }
+            }
+        };
+    </script>
+</head>
+
+<body>
+    <div class="reveal">
+        <div class="slides"><section data-separator="?
+---?
+" data-separator-vertical="?
+--?
+" data-separator-notes="note:" data-markdown><script type="text/template"><!-- .slide: class="drop" template="" -->
+<div class="" style="position: absolute; left: 0px; top: 0px; height: 700px; width: 960px; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center" absolute="true">
+
+# Boot sob Coação
+
+BSides Curitiba - 2026 - bsidescwb.com.br
+</div></script></section><section data-separator="?
+---?
+" data-separator-vertical="?
+--?
+" data-separator-notes="note:" data-markdown><script type="text/template"><!-- .slide: class="drop" template="" -->
+<div class="" style="position: absolute; left: 0px; top: 0px; height: 700px; width: 960px; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center" absolute="true">
+
+### `$ whoami`
+
+- Gabriel B. Sant'Anna (`baioc`)
+
+- Software Engineer @ Canonical
+    - Linux, software open source
+    - Cibersegurança, privacidade
+    - Ciência da computação
+
+- <`www.baioc.dev`>
+</div></script></section><section data-separator="?
+---?
+" data-separator-vertical="?
+--?
+" data-separator-notes="note:" data-markdown><script type="text/template"><!-- .slide: class="drop" template="" -->
+<div class="" style="position: absolute; left: 0px; top: 0px; height: 700px; width: 960px; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center" absolute="true">
+
+## Sumário
+
+1. **Introdução ao problema de coação**
+2. Boot do Linux e criptografia LUKS
+3. Implementando um "*duress boot*"
+4. Analisando modelos de ameaça
+</div></script></section><section data-separator="?
+---?
+" data-separator-vertical="?
+--?
+" data-separator-notes="note:" data-markdown><script type="text/template"><!-- .slide: class="drop" template="" -->
+<div class="" style="position: absolute; left: 0px; top: 0px; height: 700px; width: 960px; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center" absolute="true">
+
+### Situação de coação (*duress*)
+
+<img src="assets/duress/dois-caras-numa-moto.png" alt="dois caras em uma moto" style="object-fit: scale-down">
+
+
+> - Perdeu! Passa tudo p\*\*\*a!
+> - Celular aí, bora ca\*\*\*ho!
+> - **Qual a senha?!**
+</div></script></section><section data-separator="?
+---?
+" data-separator-vertical="?
+--?
+" data-separator-notes="note:" data-markdown><script type="text/template"><!-- .slide: class="drop" template="" -->
+<div class="" style="position: absolute; left: 0px; top: 0px; height: 700px; width: 960px; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center" absolute="true">
+
+### *Duress Pin* do GrapheneOS
+
+FENCEDCODEmermaid:1:YGBgbWVybWFpZApmbG93Y2hhcnQgVEIKICAgIFBhc3N3b3JkKCJUZWxhIGRlIGJsb3F1ZWlvIikKICAgIER1cmVzc1BpbnsiU2VuaGEgZGlnaXRhZGEifQogICAgVW5sb2NrKCJEZXNibG9xdWVpYSBvIGRpc3Bvc2l0aXZvIG5vcm1hbG1lbnRlIikKICAgIFdpcGUoIkxpbXBhIHRvZG9zIG9zIGRhZG9zIGRvIGRpc3Bvc2l0aXZvIikKCiAgICBQYXNzd29yZCAtLT4gRHVyZXNzUGluCiAgICBEdXJlc3NQaW4gLS0+fFBpbiBub3JtYWw/fCBVbmxvY2sKICAgIER1cmVzc1BpbiAtLT58UGluIGRlIGNvYcOnw6NvP3wgV2lwZQpgYGA=ECODDECNEF
+</div></script></section><section data-separator="?
+---?
+" data-separator-vertical="?
+--?
+" data-separator-notes="note:" data-markdown><script type="text/template"><!-- .slide: class="drop" template="" -->
+<div class="" style="position: absolute; left: 0px; top: 0px; height: 700px; width: 960px; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center" absolute="true">
+
+<img src="assets/duress/grapheneos-duress-pin.gif" alt="" style="width: 800px; height: 500px; object-fit: fill">
+
+
+- youtube.com/watch?v=wZ37Jr57Urg
+- youtube.com/shorts/NaWLw1nokyU
+</div></script></section><section data-separator="?
+---?
+" data-separator-vertical="?
+--?
+" data-separator-notes="note:" data-markdown><script type="text/template"><!-- .slide: class="drop" template="" -->
+<div class="" style="position: absolute; left: 0px; top: 0px; height: 700px; width: 960px; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center" absolute="true">
+
+### Boa ideia? 🤔
+
+1. Duress pin para o assaltante?
+
+2. E se fosse um notebook?
+</div></script></section><section data-separator="?
+---?
+" data-separator-vertical="?
+--?
+" data-separator-notes="note:" data-markdown><script type="text/template"><!-- .slide: class="drop" template="" -->
+<div class="" style="position: absolute; left: 0px; top: 0px; height: 700px; width: 960px; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center" absolute="true">
+
+### Motivação
+
+1. Duress pin para o assaltante?
+    - **Provavelmente não**
+    - "Celular pro ladrão"?
+    - Melhor: senha para perfil falso
+
+2. E se fosse um notebook?
+    - Não temos "duress pin" em outros dispositivos
+    - **Vamos implementar um pro Linux**
+    - E sim, com suporte a perfil / S.O. falso
+</div></script></section><section data-separator="?
+---?
+" data-separator-vertical="?
+--?
+" data-separator-notes="note:" data-markdown><script type="text/template"><!-- .slide: class="drop" template="" -->
+<div class="" style="position: absolute; left: 0px; top: 0px; height: 700px; width: 960px; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center" absolute="true">
+
+### Spoiler
+
+<img src="assets/duress/duress-demo-reboot.gif" alt="demo" style="object-fit: scale-down">
+</div></script></section><section data-separator="?
+---?
+" data-separator-vertical="?
+--?
+" data-separator-notes="note:" data-markdown><script type="text/template"><!-- .slide: class="drop" template="" -->
+<div class="" style="position: absolute; left: 0px; top: 0px; height: 700px; width: 960px; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center" absolute="true">
+
+### Legalidade
+
+<img src="assets/duress/news-duress-felony-usa.png" alt="" style="width: 750px; height: 350px; object-fit: fill">
+
+
+- Caso nos EUA definindo precedentes
+- Duress pin pode ser interpretado como **obstrução de justiça** ou **supressão de documentos**
+</div></script></section><section data-separator="?
+---?
+" data-separator-vertical="?
+--?
+" data-separator-notes="note:" data-markdown><script type="text/template"><!-- .slide: class="drop" template="" -->
+<div class="" style="position: absolute; left: 0px; top: 0px; height: 700px; width: 960px; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center" absolute="true">
+
+## Sumário
+
+1. Introdução ao problema de coação
+2. **Boot do Linux e criptografia LUKS**
+3. Implementando um "*duress boot*"
+4. Analisando modelos de ameaça
+</div></script></section><section data-separator="?
+---?
+" data-separator-vertical="?
+--?
+" data-separator-notes="note:" data-markdown><script type="text/template"><!-- .slide: class="drop" template="" -->
+<div class="" style="position: absolute; left: 0px; top: 0px; height: 700px; width: 960px; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center" absolute="true">
+
+<img src="assets/duress/mug-canonical.jpeg" alt="mug canonical/ubuntu" style="object-fit: scale-down">
+</div></script></section><section data-separator="?
+---?
+" data-separator-vertical="?
+--?
+" data-separator-notes="note:" data-markdown><script type="text/template"><!-- .slide: class="drop" template="" -->
+<div class="" style="position: absolute; left: 0px; top: 0px; height: 700px; width: 960px; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center" absolute="true">
+
+### Boot do Linux
+
+FENCEDCODEmermaid:1:YGBgbWVybWFpZApmbG93Y2hhcnQgTFIKICAgIHN1YmdyYXBoIEZpcm13YXJlCiAgICAgICAgVUVGSSgiVUVGSSA8YnI+IGJvb3QgbG9hZGVyIikKICAgIGVuZAoKICAgIHN1YmdyYXBoIEVTUCBbIkVGSSBTeXN0ZW0gUGFydGl0aW9uIChFU1ApIl0KICAgICAgICBCb290bG9hZGVyKCIoc2Vjb25kLXN0YWdlKSA8YnI+IGJvb3QgbG9hZGVyIikKICAgIGVuZAoKICAgIHN1YmdyYXBoIGJvb3RmcyBbIlBhcnRpw6fDo28gZGUgQm9vdCJdCiAgICAgICAgS2VybmVsKCJLZXJuZWwgZG8gTGludXgiKQogICAgICAgIEluaXRyZCgiaW5pdCBSQU0gZGlzayAoaW5pdHJkLCA8YnI+ICdlYXJseSB1c2Vyc3BhY2UnKSIpCiAgICBlbmQKCiAgICBzdWJncmFwaCByb290ZnMgWyJQYXJ0acOnw6NvIGRvIFNpc3RlbWEgKHJvb3RmcykiXQogICAgICAgIFVzZXJzcGFjZSgiVXNlcnNwYWNlIC8gPGJyPiBTLk8uIC8gZGlzdHJvIikKICAgIGVuZAoKICAgIFVFRkkgLS0+IEJvb3Rsb2FkZXIgLS0+IEtlcm5lbCAtLT4gSW5pdHJkIC0tPiBVc2Vyc3BhY2UKYGBgECODDECNEF
+</div></script></section><section data-separator="?
+---?
+" data-separator-vertical="?
+--?
+" data-separator-notes="note:" data-markdown><script type="text/template"><!-- .slide: class="drop" template="" -->
+<div class="" style="position: absolute; left: 0px; top: 0px; height: 700px; width: 960px; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center" absolute="true">
+
+#### UEFI Firmware
+
+FENCEDCODEmermaid:1:YGBgbWVybWFpZApmbG93Y2hhcnQgTFIKICAgIHN1YmdyYXBoIEZpcm13YXJlCiAgICAgICAgVUVGSSgiVUVGSSA8YnI+IGJvb3QgbG9hZGVyIikKICAgIGVuZAoKICAgIHN1YmdyYXBoIEVTUCBbIkVGSSBTeXN0ZW0gUGFydGl0aW9uIChFU1ApIl0KICAgICAgICBCb290bG9hZGVyKCIoc2Vjb25kLXN0YWdlKSA8YnI+IGJvb3QgbG9hZGVyIikKICAgIGVuZAoKICAgIHN1YmdyYXBoIGJvb3RmcyBbIlBhcnRpw6fDo28gZGUgQm9vdCJdCiAgICAgICAgS2VybmVsKCJLZXJuZWwgZG8gTGludXgiKQogICAgICAgIEluaXRyZCgiaW5pdCBSQU0gZGlzayAoaW5pdHJkLCA8YnI+ICdlYXJseSB1c2Vyc3BhY2UnKSIpCiAgICBlbmQKCiAgICBzdWJncmFwaCByb290ZnMgWyJQYXJ0acOnw6NvIGRvIFNpc3RlbWEgKHJvb3RmcykiXQogICAgICAgIFVzZXJzcGFjZSgiVXNlcnNwYWNlIC8gPGJyPiBTLk8uIC8gZGlzdHJvIikKICAgIGVuZAoKICAgIFVFRkkgLS0+IEJvb3Rsb2FkZXIgLS0+IEtlcm5lbCAtLT4gSW5pdHJkIC0tPiBVc2Vyc3BhY2UKCiAgICBzdHlsZSBGaXJtd2FyZSBzdHJva2U6I2ZmYjg2YyxzdHJva2Utd2lkdGg6MnB4OwpgYGA=ECODDECNEF
+
+<img src="assets/duress/uefi-boot-qemu.png" alt="" style="width: 700px; height: 450px; object-fit: fill">
+</div></script></section><section data-separator="?
+---?
+" data-separator-vertical="?
+--?
+" data-separator-notes="note:" data-markdown><script type="text/template"><!-- .slide: class="drop" template="" -->
+<div class="" style="position: absolute; left: 0px; top: 0px; height: 700px; width: 960px; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center" absolute="true">
+
+#### Boot Loader
+
+FENCEDCODEmermaid:1:YGBgbWVybWFpZApmbG93Y2hhcnQgTFIKICAgIHN1YmdyYXBoIEZpcm13YXJlCiAgICAgICAgVUVGSSgiVUVGSSA8YnI+IGJvb3QgbG9hZGVyIikKICAgIGVuZAoKICAgIHN1YmdyYXBoIEVTUCBbIkVGSSBTeXN0ZW0gUGFydGl0aW9uIChFU1ApIl0KICAgICAgICBCb290bG9hZGVyKCIoc2Vjb25kLXN0YWdlKSA8YnI+IGJvb3QgbG9hZGVyIikKICAgIGVuZAoKICAgIHN1YmdyYXBoIGJvb3RmcyBbIlBhcnRpw6fDo28gZGUgQm9vdCJdCiAgICAgICAgS2VybmVsKCJLZXJuZWwgZG8gTGludXgiKQogICAgICAgIEluaXRyZCgiaW5pdCBSQU0gZGlzayAoaW5pdHJkLCA8YnI+ICdlYXJseSB1c2Vyc3BhY2UnKSIpCiAgICBlbmQKCiAgICBzdWJncmFwaCByb290ZnMgWyJQYXJ0acOnw6NvIGRvIFNpc3RlbWEgKHJvb3RmcykiXQogICAgICAgIFVzZXJzcGFjZSgiVXNlcnNwYWNlIC8gPGJyPiBTLk8uIC8gZGlzdHJvIikKICAgIGVuZAoKICAgIFVFRkkgLS0+IEJvb3Rsb2FkZXIgLS0+IEtlcm5lbCAtLT4gSW5pdHJkIC0tPiBVc2Vyc3BhY2UKCiAgICBzdHlsZSBCb290bG9hZGVyIHN0cm9rZTojZmZiODZjLHN0cm9rZS13aWR0aDoycHg7CmBgYA==ECODDECNEF
+
+- Objetivo: carrega o kernel + parâmetros
+
+- Exemplo: **GRUB**
+
+FENCEDCODEshell:1:YGBgc2hlbGwKJCBncmVwIC1lICd2bWxpbnV6JyAtQyAyIC9ib290L2dydWIvZ3J1Yi5jZmcKCm1lbnVlbnRyeSAnQXJjaCBMaW51eCcgewogICAgc2V0IHJvb3Q9Li4uCiAgICBsaW51eCAgL3ZtbGludXotbGludXggY3J5cHRkZXZpY2U9VVVJRD1mYTNmNWMzYi4uLjpyb290IC4uLgogICAgaW5pdHJkIC9pbml0cmFtZnMtbGludXguaW1nCn0KYGBgECODDECNEF
+</div></script></section><section data-separator="?
+---?
+" data-separator-vertical="?
+--?
+" data-separator-notes="note:" data-markdown><script type="text/template"><!-- .slide: class="drop" template="" -->
+<div class="" style="position: absolute; left: 0px; top: 0px; height: 700px; width: 960px; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center" absolute="true">
+
+#### Kernel e initrd
+
+FENCEDCODEmermaid:1:YGBgbWVybWFpZApmbG93Y2hhcnQgTFIKICAgIHN1YmdyYXBoIEZpcm13YXJlCiAgICAgICAgVUVGSSgiVUVGSSA8YnI+IGJvb3QgbG9hZGVyIikKICAgIGVuZAoKICAgIHN1YmdyYXBoIEVTUCBbIkVGSSBTeXN0ZW0gUGFydGl0aW9uIChFU1ApIl0KICAgICAgICBCb290bG9hZGVyKCIoc2Vjb25kLXN0YWdlKSA8YnI+IGJvb3QgbG9hZGVyIikKICAgIGVuZAoKICAgIHN1YmdyYXBoIGJvb3RmcyBbIlBhcnRpw6fDo28gZGUgQm9vdCJdCiAgICAgICAgS2VybmVsKCJLZXJuZWwgZG8gTGludXgiKQogICAgICAgIEluaXRyZCgiaW5pdCBSQU0gZGlzayAoaW5pdHJkLCA8YnI+ICdlYXJseSB1c2Vyc3BhY2UnKSIpCiAgICBlbmQKCiAgICBzdWJncmFwaCByb290ZnMgWyJQYXJ0acOnw6NvIGRvIFNpc3RlbWEgKHJvb3RmcykiXQogICAgICAgIFVzZXJzcGFjZSgiVXNlcnNwYWNlIC8gPGJyPiBTLk8uIC8gZGlzdHJvIikKICAgIGVuZAoKICAgIFVFRkkgLS0+IEJvb3Rsb2FkZXIgLS0+IEtlcm5lbCAtLT4gSW5pdHJkIC0tPiBVc2Vyc3BhY2UKCiAgICBzdHlsZSBib290ZnMgc3Ryb2tlOiNmZmI4NmMsc3Ryb2tlLXdpZHRoOjJweDsKYGBgECODDECNEF
+
+- **Kernel**: carrega e executa o initrd
+
+- **Initrd**: implementa funcionalidades mais complexas (filesystems, RAID, criptografia) p/ userspace
+</div></script></section><section data-separator="?
+---?
+" data-separator-vertical="?
+--?
+" data-separator-notes="note:" data-markdown><script type="text/template"><!-- .slide: class="drop" template="" -->
+<div class="" style="position: absolute; left: 0px; top: 0px; height: 700px; width: 960px; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center" absolute="true">
+
+#### Userspace
+
+FENCEDCODEmermaid:1:YGBgbWVybWFpZApmbG93Y2hhcnQgTFIKICAgIHN1YmdyYXBoIEZpcm13YXJlCiAgICAgICAgVUVGSSgiVUVGSSA8YnI+IGJvb3QgbG9hZGVyIikKICAgIGVuZAoKICAgIHN1YmdyYXBoIEVTUCBbIkVGSSBTeXN0ZW0gUGFydGl0aW9uIChFU1ApIl0KICAgICAgICBCb290bG9hZGVyKCIoc2Vjb25kLXN0YWdlKSA8YnI+IGJvb3QgbG9hZGVyIikKICAgIGVuZAoKICAgIHN1YmdyYXBoIGJvb3RmcyBbIlBhcnRpw6fDo28gZGUgQm9vdCJdCiAgICAgICAgS2VybmVsKCJLZXJuZWwgZG8gTGludXgiKQogICAgICAgIEluaXRyZCgiaW5pdCBSQU0gZGlzayAoaW5pdHJkLCA8YnI+ICdlYXJseSB1c2Vyc3BhY2UnKSIpCiAgICBlbmQKCiAgICBzdWJncmFwaCByb290ZnMgWyJQYXJ0acOnw6NvIGRvIFNpc3RlbWEgKHJvb3RmcykiXQogICAgICAgIFVzZXJzcGFjZSgiVXNlcnNwYWNlIC8gPGJyPiBTLk8uIC8gZGlzdHJvIikKICAgIGVuZAoKICAgIFVFRkkgLS0+IEJvb3Rsb2FkZXIgLS0+IEtlcm5lbCAtLT4gSW5pdHJkIC0tPiBVc2Vyc3BhY2UKCiAgICBzdHlsZSBVc2Vyc3BhY2Ugc3Ryb2tlOiNmZmI4NmMsc3Ryb2tlLXdpZHRoOjJweDsKYGBgECODDECNEF
+
+<img src="assets/duress/userspace-boot.gif" alt="" style="width: 750px; height: 450px; object-fit: fill">
+</div></script></section><section data-separator="?
+---?
+" data-separator-vertical="?
+--?
+" data-separator-notes="note:" data-markdown><script type="text/template"><!-- .slide: class="drop" template="" -->
+<div class="" style="position: absolute; left: 0px; top: 0px; height: 700px; width: 960px; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center" absolute="true">
+
+#### Outros esquemas de boot
+
+FENCEDCODEmermaid:1:YGBgbWVybWFpZApmbG93Y2hhcnQgTFIKICAgIHN1YmdyYXBoIEZpcm13YXJlCiAgICAgICAgVUVGSSgiVUVGSSIpCiAgICBlbmQKCiAgICBzdWJncmFwaCAiYEVTUCA9IC9ib290YCIKICAgICAgICBHUlVCKCJHUlVCIikKICAgICAgICBLZXJuZWwoImtlcm5lbCIpCiAgICAgICAgSW5pdHJkKCJpbml0cmQiKQogICAgZW5kCgogICAgc3ViZ3JhcGggIkxpbnV4IHJvb3RmcyIKICAgICAgICBVc2Vyc3BhY2UoInVzZXJzcGFjZSIpCiAgICBlbmQKCiAgICBVRUZJIC0tPiBHUlVCIC0tPiBLZXJuZWwgLS0+IEluaXRyZCAtLT4gVXNlcnNwYWNlCmBgYA==ECODDECNEF
+
+FENCEDCODEmermaid:1:YGBgbWVybWFpZApmbG93Y2hhcnQgTFIKICAgIHN1YmdyYXBoIEZpcm13YXJlCiAgICAgICAgVUVGSSgiVUVGSSIpCiAgICBlbmQKCiAgICBzdWJncmFwaCBFU1AKICAgICAgICBXSU5CT09UKCJXaW5kb3dzIDxicj4gQm9vdGxvYWRlciIpCiAgICAgICAgR1JVQigiR1JVQiIpCiAgICBlbmQKCiAgICBzdWJncmFwaCAiTGludXggcm9vdGZzIgogICAgICAgIEtlcm5lbCgia2VybmVsIikKICAgICAgICBJbml0cmQoImluaXRyZCIpCiAgICAgICAgVXNlcnNwYWNlKCJ1c2Vyc3BhY2UiKQogICAgZW5kCgogICAgc3ViZ3JhcGggIkM6IERyaXZlIgogICAgICAgIFdpbmRvd3MoIldpbmRvd3MiKQogICAgZW5kCgogICAgVUVGSSAtLT4gV0lOQk9PVCAtLT4gV2luZG93cwogICAgVUVGSSAtLT4gR1JVQiAtLT4gS2VybmVsIC0tPiBJbml0cmQgLS0+IFVzZXJzcGFjZQpgYGA=ECODDECNEF
+</div></script></section><section data-separator="?
+---?
+" data-separator-vertical="?
+--?
+" data-separator-notes="note:" data-markdown><script type="text/template"><!-- .slide: class="drop" template="" -->
+<div class="" style="position: absolute; left: 0px; top: 0px; height: 700px; width: 960px; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center" absolute="true">
+
+#### Fluxo lógico
+
+FENCEDCODEmermaid:1:YGBgbWVybWFpZApmbG93Y2hhcnQgTFIKICAgIHN1YmdyYXBoIEZpcm13YXJlCiAgICAgICAgVUVGSSgiVUVGSSIpCiAgICBlbmQKCiAgICBzdWJncmFwaCBFU1AKICAgICAgICBCb290bG9hZGVyKCJCb290IGxvYWRlciIpCiAgICBlbmQKCiAgICBzdWJncmFwaCAiUGFydGnDp8OjbyBkZSBCb290IgogICAgICAgIEluaXRyZCgia2VybmVsK2luaXRyZCIpCiAgICBlbmQKCiAgICBzdWJncmFwaCByb290ZnMKICAgICAgICBVc2Vyc3BhY2UoInVzZXJzcGFjZSIpCiAgICBlbmQKCiAgICBVRUZJIC0tPiBCb290bG9hZGVyIC0tPiBJbml0cmQgLS0+IFVzZXJzcGFjZQpgYGA=ECODDECNEF
+
+- **Firmware**: fixo na placa mãe (a.k.a. BIOS)
+
+- **ESP**: partição sem criptografia
+
+- **Boot loader**: carrega o kernel + parâmetros
+
+- **Initrd**: implementa funcionalidades mais complexas (filesystems, RAID, **criptografia**) p/ userspace
+</div></script></section><section data-separator="?
+---?
+" data-separator-vertical="?
+--?
+" data-separator-notes="note:" data-markdown><script type="text/template"><!-- .slide: class="drop" template="" -->
+<div class="" style="position: absolute; left: 0px; top: 0px; height: 700px; width: 960px; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center" absolute="true">
+
+### Criptografia LUKS
+
+- **LUKS**: **L**inux **U**nified **K**ey **S**etup
+
+- Implementado na ferramenta `cryptsetup`
+
+- Utiliza o módulo `dm-crypt` do kernel do Linux para expor dispositivos com criptografia de disco
+
+- **Padrão para formato em disco** de partições cifradas, metadados, chaves e parâmetros
+</div></script></section><section data-separator="?
+---?
+" data-separator-vertical="?
+--?
+" data-separator-notes="note:" data-markdown><script type="text/template"><!-- .slide: class="drop" template="" -->
+<div class="" style="position: absolute; left: 0px; top: 0px; height: 700px; width: 960px; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center" absolute="true">
+
+#### Block devices (discos)
+
+FENCEDCODEshell:1:YGBgc2hlbGwKJCBsc2JsayAtZgoKTkFNRSAgICAgIEZTVFlQRSAgICAgICBGU1ZFUiAgVVVJRCAgICAgICAgICAgICAgTU9VTlRQT0lOVFMKc2RhCnwK4pSc4pSAc2RhMSAgICB2ZmF0ICAgICAgICAgRkFUMzIgIEE0RjQtM0I5MiAgICAgICAgIC9ib290CnwK4pSc4pSAc2RhMiAgICBjcnlwdG9fTFVLUyAgMiAgICAgIGZhM2Y1YzNiLTRiYzMuLi4KfCB8CuKUgiDilJTilIByb290ICBidHJmcyAgICAgICAgICAgICAgIDgyZGRlOTE0LWYwNDMuLi4gIC8KfArilJTilIBzZGEzICAgIGNyeXB0b19MVUtTICAyICAgICAgMDQ2MzQzMmEtMDMwZS4uLgpgYGA=ECODDECNEF
+
+- `/dev/sda`: disco `sda`
+- `/dev/sda2`: partição `2` do disco, formato LUKS2
+- `/dev/mapper/root`: dispositivo com criptografia de disco, já desbloqueado e montado, BTRFS
+</div></script></section><section data-separator="?
+---?
+" data-separator-vertical="?
+--?
+" data-separator-notes="note:" data-markdown><script type="text/template"><!-- .slide: class="drop" template="" -->
+<div class="" style="position: absolute; left: 0px; top: 0px; height: 700px; width: 960px; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center" absolute="true">
+
+#### Mapeamento físico-lógico
+
+<img src="assets/duress/luks-dm-crypt-mount.excalidraw.png" alt="LUKS dm-crypt mount" style="object-fit: scale-down">
+</div></script></section><section data-separator="?
+---?
+" data-separator-vertical="?
+--?
+" data-separator-notes="note:" data-markdown><script type="text/template"><!-- .slide: class="drop" template="" -->
+<div class="" style="position: absolute; left: 0px; top: 0px; height: 700px; width: 960px; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center" absolute="true">
+
+#### cryptsetup
+
+FENCEDCODEshell:1:YGBgc2hlbGwKJCBjcnlwdHNldHVwIG9wZW4gL2Rldi9zZGEzIGRhZG9zCkVudGVyIHBhc3NwaHJhc2UgZm9yIC9kZXYvc2RhMzogKioqKioqKioKCiQgbHNibGsKLi4uCuKUlOKUgHNkYTMgICAgIGNyeXB0b19MVUtTICAyICAgIDA0NjM0MzJhLTAzMGUuLi4KICDilJTilIBkYWRvcyAgZXh0NCAgICAgICAgIDEuMCAgMzUxMmZhOWQtOWIxNy4uLgoKJCBtb3VudCAvZGV2L21hcHBlci9kYWRvcyAvbW50CgokIHVtb3VudCAvbW50CiQgY3J5cHRzZXR1cCBjbG9zZSBkYWRvcwpgYGA=ECODDECNEF
+
+FENCEDCODEshell:1:YGBgc2hlbGwKJCBjcnlwdHNldHVwIGVyYXNlIC9kZXYvc2RhMwpgYGA=ECODDECNEF
+</div></script></section><section data-separator="?
+---?
+" data-separator-vertical="?
+--?
+" data-separator-notes="note:" data-markdown><script type="text/template"><!-- .slide: class="drop" template="" -->
+<div class="" style="position: absolute; left: 0px; top: 0px; height: 700px; width: 960px; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center" absolute="true">
+
+#### Metadados do LUKS
+
+<img src="assets/duress/luks-headers.excalidraw.png" alt="LUKS headers on disk" style="object-fit: scale-down">
+
+
+<br>
+
+- *Master Key* (MK) presente em cada keyslot ativo, mas criptografada com uma senha diferente
+</div></script></section><section data-separator="?
+---?
+" data-separator-vertical="?
+--?
+" data-separator-notes="note:" data-markdown><script type="text/template"><!-- .slide: class="drop" template="" -->
+<div class="" style="position: absolute; left: 0px; top: 0px; height: 700px; width: 960px; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center" absolute="true">
+
+<img src="assets/duress/luks-headers.excalidraw.png" alt="LUKS headers on disk" style="object-fit: scale-down">
+
+
+<img src="assets/duress/luks-encryption-flowchart.png" alt="LUKS encryption process" style="object-fit: scale-down">
+
+
+- Fonte da 2a imagem: [irq5.io](https://irq5.io/2014/11/19/bruteforcing-luks-volumes-explained/)
+</div></script></section><section data-separator="?
+---?
+" data-separator-vertical="?
+--?
+" data-separator-notes="note:" data-markdown><script type="text/template"><!-- .slide: class="drop" template="" -->
+<div class="" style="position: absolute; left: 0px; top: 0px; height: 700px; width: 960px; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center" absolute="true">
+
+FENCEDCODEshell:1:YGBgc2hlbGwKJCBjcnlwdHNldHVwIGx1a3NEdW1wIC9kZXYvc2RhMwpgYGA=ECODDECNEF
+
+FENCEDCODE:1:YGBgCkxVS1MgaGVhZGVyIGluZm9ybWF0aW9uCiAgICBWZXJzaW9uOiAgICAgICAJMgogICAgVVVJRDogICAgICAgICAgCTA0NjM0MzJhLTAzMGUuLi4KRGF0YSBzZWdtZW50czoKICAwOiBjcnlwdAogICAgICAgIGxlbmd0aDogKHdob2xlIGRldmljZSkKICAgICAgICBjaXBoZXI6IGFlcy14dHMtcGxhaW42NApLZXlzbG90czoKICAwOiBsdWtzMgogICAgICAgIFBCS0RGOiAgICAgIGFyZ29uMmlkCiAgICAgICAgU2FsdDogICAgICAgODkgZTkgZjMgMTUgMTYgLi4uCiAgICAgICAgRGlnZXN0IElEOiAgMApEaWdlc3RzOgogIDA6IHBia2RmMgogICAgICAgIERpZ2VzdDogICAgIDRkIGQxIGMxIDhhIGQ3IC4uLgpgYGA=ECODDECNEF
+</div></script></section><section data-separator="?
+---?
+" data-separator-vertical="?
+--?
+" data-separator-notes="note:" data-markdown><script type="text/template"><!-- .slide: class="drop" template="" -->
+<div class="" style="position: absolute; left: 0px; top: 0px; height: 700px; width: 960px; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center" absolute="true">
+
+## Sumário
+
+1. Introdução ao problema de coação
+2. Boot do Linux e criptografia LUKS
+3. **Implementando um "*duress boot*"**
+4. Analisando modelos de ameaça
+</div></script></section><section data-separator="?
+---?
+" data-separator-vertical="?
+--?
+" data-separator-notes="note:" data-markdown><script type="text/template"><!-- .slide: class="drop" template="" -->
+<div class="" style="position: absolute; left: 0px; top: 0px; height: 700px; width: 960px; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center" absolute="true">
+
+### Processo de boot
+
+FENCEDCODEmermaid:1:YGBgbWVybWFpZApmbG93Y2hhcnQgTFIKICAgIHN1YmdyYXBoIEZpcm13YXJlCiAgICAgICAgVUVGSSgiVUVGSSIpCiAgICBlbmQKCiAgICBzdWJncmFwaCBFU1AKICAgICAgICBCb290bG9hZGVyKCJCb290IGxvYWRlciIpCiAgICBlbmQKCiAgICBzdWJncmFwaCBib290ZnMgWyJQYXJ0acOnw6NvIGRlIEJvb3QiXQogICAgICAgIEluaXRyZCgia2VybmVsK2luaXRyZCIpCiAgICBlbmQKCiAgICBzdWJncmFwaCByb290ZnMgWyJTaXN0ZW1hIGNyaXB0b2dyYWZhZG8gYy8gTFVLUyJdCiAgICAgICAgVXNlcnNwYWNlKCJyb290ZnMiKQogICAgZW5kCgogICAgVUVGSSAtLT4gQm9vdGxvYWRlciAtLT4gSW5pdHJkIC0tPiByb290ZnMKCiAgICBzdHlsZSBJbml0cmQgc3Ryb2tlOiNmZmI4NmMsc3Ryb2tlLXdpZHRoOjJweDsKICAgIHN0eWxlIHJvb3RmcyBzdHJva2U6I2VhNzFiOCxzdHJva2Utd2lkdGg6MnB4OwpgYGA=ECODDECNEF
+</div></script></section><section data-separator="?
+---?
+" data-separator-vertical="?
+--?
+" data-separator-notes="note:" data-markdown><script type="text/template"><!-- .slide: class="drop" template="" -->
+<div class="" style="position: absolute; left: 0px; top: 0px; height: 700px; width: 960px; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center" absolute="true">
+
+### mkinitcpio
+
+- Gera imagem do kernel e `initramfs` (`initrd`)
+
+- Utilizado no Arch Linux
+
+- Configuração em `/etc/mkinitcpio.conf`
+
+- Extensível, com sistema de hooks
+</div></script></section><section data-separator="?
+---?
+" data-separator-vertical="?
+--?
+" data-separator-notes="note:" data-markdown><script type="text/template"><!-- .slide: class="drop" template="" -->
+<div class="" style="position: absolute; left: 0px; top: 0px; height: 700px; width: 960px; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center" absolute="true">
+
+### Configuração de hooks
+
+FENCEDCODEshell:1:YGBgc2hlbGwKJCBjYXQgL2V0Yy9ta2luaXRjcGlvLmNvbmYKCk1PRFVMRVM9KCkKQklOQVJJRVM9KCkKRklMRVM9KCkKSE9PS1M9KGJhc2UgdWRldiAuLi4gZW5jcnlwdCAuLi4pCmBgYA==ECODDECNEF
+
+&nbsp;
+
+FENCEDCODEmermaid:1:YGBgbWVybWFpZApmbG93Y2hhcnQgTFIKICAgIGJhc2UgLS0+IHVkZXYgLS0+IGRvdDFbIi4uLiJdIC0tPiBlbmNyeXB0IC0tPiBkb3QyWyIuLi4iXQogICAgc3R5bGUgZW5jcnlwdCBzdHJva2U6I2VhNzFiOCxzdHJva2Utd2lkdGg6MnB4OwpgYGA=ECODDECNEF
+</div></script></section><section data-separator="?
+---?
+" data-separator-vertical="?
+--?
+" data-separator-notes="note:" data-markdown><script type="text/template"><!-- .slide: class="drop" template="" -->
+<div class="" style="position: absolute; left: 0px; top: 0px; height: 700px; width: 960px; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center" absolute="true">
+
+### encrypt hook (simplificado)
+
+FENCEDCODEbash:1:YGBgYmFzaApydW5faG9vaygpIHsKICAgIG1vZHByb2JlIC1hIC1xIGRtLWNyeXB0CiAgICBwYXJzZV9jcnlwdF9hcmdzCgogICAgaWYgWyAtYiAiL2Rldi9tYXBwZXIvJHtjcnlwdG5hbWV9IiBdOyB0aGVuCiAgICAgICAgbXNnICJEZXZpY2UgJHtjcnlwdG5hbWV9IGFscmVhZHkgZXhpc3RzLCBza2lwcGluZy4uLiIKCiAgICBlbGlmIHJlc29sdmVkPSQocmVzb2x2ZV9kZXZpY2VfbHVrcyAiJHtjcnlwdGRldn0iKTsgdGhlbgogICAgICAgIG1zZyAiUGFzc3dvcmQgcmVxdWlyZWQgdG8gYWNjZXNzICR7Y3J5cHRuYW1lfToiCiAgICAgICAgY3J5cHRzZXR1cCBvcGVuICIke3Jlc29sdmVkfSIgIiR7Y3J5cHRuYW1lfSIKCiAgICBlbHNlCiAgICAgICAgZXJyICJGYWlsZWQgdG8gZGVjcnlwdCAke2NyeXB0bmFtZX0hIgogICAgZmkKfQpgYGA=ECODDECNEF
+
+- Fonte: [archlinux/mkinitcpio](https://gitlab.archlinux.org/archlinux/mkinitcpio/mkinitcpio/-/blob/master/hooks/encrypt)
+</div></script></section><section data-separator="?
+---?
+" data-separator-vertical="?
+--?
+" data-separator-notes="note:" data-markdown><script type="text/template"><!-- .slide: class="drop" template="" -->
+<div class="" style="position: absolute; left: 0px; top: 0px; height: 700px; width: 960px; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center" absolute="true">
+
+### Cryptdevice
+
+FENCEDCODEshell:1:YGBgc2hlbGwKJCBncmVwIC1lICd2bWxpbnV6JyAtQyAyIC9ib290L2dydWIvZ3J1Yi5jZmcKCm1lbnVlbnRyeSAnQXJjaCBMaW51eCcgewogICAgc2V0IHJvb3Q9Li4uCiAgICBsaW51eCAgL3ZtbGludXotbGludXggY3J5cHRkZXZpY2U9VVVJRD1mYTNmNWMzYi4uLjpyb290IC4uLgogICAgaW5pdHJkIC9pbml0cmFtZnMtbGludXguaW1nCn0KYGBgECODDECNEF
+
+- `cryptdevice`=`cryptdev`:`cryptname`
+- Esses parâmetros do kernel (**passados via bootloader**) são lidos pelos scripts do mkinitcpio
+</div></script></section><section data-separator="?
+---?
+" data-separator-vertical="?
+--?
+" data-separator-notes="note:" data-markdown><script type="text/template"><!-- .slide: class="drop" template="" -->
+<div class="" style="position: absolute; left: 0px; top: 0px; height: 700px; width: 960px; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center" absolute="true">
+
+### Duress pin para Linux
+
+FENCEDCODEshell:1:YGBgc2hlbGwKJCBjYXQgL2V0Yy9ta2luaXRjcGlvLmNvbmYKCkhPT0tTPShiYXNlIHVkZXYgLi4uIGR1cmVzcyBlbmNyeXB0IC4uLikKIyAtLS0tLS0tLS0tLS0tLS0tLS0tLS0tXgpgYGA=ECODDECNEF
+
+FENCEDCODEmermaid:1:YGBgbWVybWFpZApmbG93Y2hhcnQgTFIKICAgIGJhc2UgLS0+IHVkZXYgLS0+IGRvdDFbIi4uLiJdIC0tPiBkdXJlc3MgLS0+IGVuY3J5cHQgLS0+IGRvdDJbIi4uLiJdCiAgICBzdHlsZSBkdXJlc3Mgc3Ryb2tlOiNmZmI4NmMsc3Ryb2tlLXdpZHRoOjJweDsKYGBgECODDECNEF
+
+<img src="assets/duress/prompt-encrypt.png" alt="" style="width: 600px; height: 100px; object-fit: fill">
+
+<img src="assets/duress/prompt-duress.png" alt="" style="width: 600px; height: 100px; object-fit: fill">
+</div></script></section><section data-separator="?
+---?
+" data-separator-vertical="?
+--?
+" data-separator-notes="note:" data-markdown><script type="text/template"><!-- .slide: class="drop" template="" -->
+<div class="" style="position: absolute; left: 0px; top: 0px; height: 700px; width: 960px; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center" absolute="true">
+
+### duress.conf
+
+FENCEDCODEshell:1:YGBgc2hlbGwKJCBkdXJlc3MtbWtjb25maWcgYm9vdCAiY3J5cHRkZXZpY2U9VVVJRD1mYTNmNWMzYjpyb290IC4uLiIgXAogID4+IC9ldGMvZHVyZXNzLmNvbmYKClBhc3N3b3JkOiAqKioqCgoKJCBjYXQgL2V0Yy9kdXJlc3MuY29uZgoKIyBWRVJTSU9OLFNBTFQsSEFTSCxBQ1RJT04sT1BUSU9OUwp2MSwuLi4sYWQ1MmY2MzMyNTU3ZmE5NTRjNjNhNzI2MjAzM2IyYTJhODgxZDNlOGMxNmI4MWQ1NTNjZmYKOGFhODA0ZmY2ZWQsd2lwZSxjcnlwdGRldmljZT1VVUlEPWZhM2Y1YzNiOnJvb3QKIyAtLS0tLS0tLS0tLV4KdjEsLi4uLDJiN2Q0ZGFjZTU5ZmY2YTA1MGVjNmE4YjkzZmU1YWFkZWM2NjkxZDhiNGQ4ZmRhOTc4ODhmCmYyZDM2ZmE3OWNhLGJvb3QsY3J5cHRkZXZpY2U9VVVJRD1mYTNmNWMzYjpyb290IC4uLgojIC0tLS0tLS0tLS0tLV4KYGBgECODDECNEF
+</div></script></section><section data-separator="?
+---?
+" data-separator-vertical="?
+--?
+" data-separator-notes="note:" data-markdown><script type="text/template"><!-- .slide: class="drop" template="" -->
+<div class="" style="position: absolute; left: 0px; top: 0px; height: 700px; width: 960px; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center" absolute="true">
+
+### Install script
+
+FENCEDCODEshell:1:YGBgc2hlbGwKJCBjYXQgL3Vzci9saWIvaW5pdGNwaW8vaW5zdGFsbC9kdXJlc3MKCiMhL2Jpbi9iYXNoCgpidWlsZCgpIHsKCWFkZF9maWxlICIvZXRjL2R1cmVzcy5jb25mIgoJYWRkX3J1bnNjcmlwdAp9CmBgYA==ECODDECNEF
+
+FENCEDCODEshell:1:YGBgc2hlbGwKJCBjYXQgL3Vzci9saWIvaW5pdGNwaW8vaG9va3MvZHVyZXNzCgojIS91c3IvYmluL2FzaAoKcnVuX2hvb2soKSB7CiAgICAuLi4KfQpgYGA=ECODDECNEF
+</div></script></section><section data-separator="?
+---?
+" data-separator-vertical="?
+--?
+" data-separator-notes="note:" data-markdown><script type="text/template"><!-- .slide: class="drop" template="" -->
+<div class="" style="position: absolute; left: 0px; top: 0px; height: 700px; width: 960px; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center" absolute="true">
+
+### duress hook (simplificado)
+
+FENCEDCODEbash:1:YGBgYmFzaApydW5faG9vaygpIHsKICAgIGVjaG8gLW4gJ0VuY3J5cHRpb24gcGFzc3dvcmQ6ICcKICAgIHJlYWQgLXJzIHBhc3N3b3JkCgogICAgd2hpbGUgcmVhZCAtciBkdXJlc3NfY29uZl9saW5lOyBkbwogICAgICAgIHBhcnNlX2R1cmVzc19hcmdzICIkZHVyZXNzX2NvbmZfbGluZSIKICAgICAgICBoYXNoX2NvbXB1dGVkPSQoY29tcHV0ZV9oYXNoICIkcGFzc3dvcmQiICIkc2FsdCIpCiAgICAgICAgaWYgWyAiJGhhc2hfY29tcHV0ZWQiID09ICIkaGFzaF9zdG9yZWQiIF07IHRoZW4KICAgICAgICAgICAgY2FzZSAiJGFjdGlvbiIgaW4KICAgICAgICAgICAgICAgIGJvb3QpIGx1a3NfZGVjcnlwdCAiJHBhc3N3b3JkIiAiJG9wdGlvbnMiIDs7CiAgICAgICAgICAgICAgICB3aXBlKSBsdWtzX2VyYXNlX2tleXNsb3RzICIkb3B0aW9ucyIgOzsKICAgICAgICAgICAgZXNhYwogICAgICAgIGZpCiAgICBkb25lIDwgL2V0Yy9kdXJlc3MuY29uZgp9CmBgYA==ECODDECNEF
+</div></script></section><section data-separator="?
+---?
+" data-separator-vertical="?
+--?
+" data-separator-notes="note:" data-markdown><script type="text/template"><!-- .slide: class="drop" template="" -->
+<div class="" style="position: absolute; left: 0px; top: 0px; height: 700px; width: 960px; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center" absolute="true">
+
+### Geração do initrd
+
+FENCEDCODEshell:1:YGBgc2hlbGwKJCBta2luaXRjcGlvIC1QCgo9PT4gQnVpbGRpbmcgaW1hZ2UgZnJvbSBwcmVzZXQ6ICdkZWZhdWx0Jwo9PT4gVXNpbmcgZGVmYXVsdCBjb25maWd1cmF0aW9uIGZpbGU6ICcvZXRjL21raW5pdGNwaW8uY29uZicKICAtPiAtayAvYm9vdC92bWxpbnV6LWxpbnV4IC1nIC9ib290L2luaXRyYW1mcy1saW51eC5pbWcKPT0+IFN0YXJ0aW5nIGJ1aWxkOiAnNy4yLjktMScKICAtPiBSdW5uaW5nIGJ1aWxkIGhvb2s6IFtiYXNlXQogIC0+IFJ1bm5pbmcgYnVpbGQgaG9vazogW3VkZXZdCiAgWy4uLl0KICAtPiBSdW5uaW5nIGJ1aWxkIGhvb2s6IFtkdXJlc3NdICA8LS0tLS0tLS0tLS0tLS0tLS0tIGFxdWkhCiAgLT4gUnVubmluZyBidWlsZCBob29rOiBbZW5jcnlwdF0KPT0+IEdlbmVyYXRpbmcgbW9kdWxlIGRlcGVuZGVuY2llcwo9PT4gQ3JlYXRpbmcgY29tcHJlc3NlZCBpbml0cmQ6ICcvYm9vdC9pbml0cmFtZnMtbGludXguaW1nJwogIC0+IEVhcmx5IHVuY29tcHJlc3NlZCBDUElPIGltYWdlIGdlbmVyYXRpb24gc3VjY2Vzc2Z1bAo9PT4gSW5pdGNwaW8gaW1hZ2UgZ2VuZXJhdGlvbiBzdWNjZXNzZnVsCmBgYA==ECODDECNEF
+</div></script></section><section data-separator="?
+---?
+" data-separator-vertical="?
+--?
+" data-separator-notes="note:" data-markdown><script type="text/template"><!-- .slide: class="drop" template="" -->
+<div class="" style="position: absolute; left: 0px; top: 0px; height: 700px; width: 960px; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center" absolute="true">
+
+### duress hook - lógica
+
+FENCEDCODEmermaid:1:YGBgbWVybWFpZApmbG93Y2hhcnQgTFIKICAgIEJvb3Rsb2FkZXIoIkZpcm13YXJlIC8gR1JVQiA8YnI+IGJvb3QgbG9hZGVyIikKCiAgICBzdWJncmFwaCBpbml0cmQKICAgICAgICBkaXJlY3Rpb24gVEIKICAgICAgICBQYXNzd29yZCgiUHJvbXB0IGRlIHNlbmhhIikKICAgICAgICBEdXJlc3NDb25maWcoIi9ldGMvZHVyZXNzLmNvbmYiKQogICAgICAgIER1cmVzc0hvb2t7Im1raW5pdGNwaW8gPGJyPiBkdXJlc3MgaG9vayJ9CiAgICAgICAgQm9vdE5vcm1hbCgiRGVzYmxvcXVlaWEgcGFydGnDp8OjbyA8YnI+IGRlIHNpc3RlbWEgbm9ybWFsIikKICAgICAgICBXaXBlKCJEZWxldGEga2V5c2xvdHMgZGEgPGJyPiBwYXJ0acOnw6NvIExVS1MiKQogICAgICAgIEJvb3REZWNveSgiRGVzYmxvcXVlaWEgcGFydGnDp8OjbyA8YnI+IGRlIHNpc3RlbWEgZmFsc28gKGRlY295KSIpCiAgICBlbmQKCiAgICBVc2Vyc3BhY2UoIkNvbnRpbnVhIHByb2Nlc3NvIDxicj4gZGUgYm9vdCBjb20gcm9vdGZzIG5hIDxicj4gcGFydGnDp8OjbyBkZXNibG9xdWVhZGEiKQoKICAgIEJvb3Rsb2FkZXIgLS0+IGluaXRyZCAtLT4gVXNlcnNwYWNlCiAgICBQYXNzd29yZCAmIER1cmVzc0NvbmZpZyAtLi0+IER1cmVzc0hvb2sKICAgIER1cmVzc0hvb2sgLS0+fGhhc2ggSDF8IEJvb3ROb3JtYWwKICAgIER1cmVzc0hvb2sgLS0+fGhhc2ggSDJ8IFdpcGUKICAgIER1cmVzc0hvb2sgLS0+fGhhc2ggSDN8IEJvb3REZWNveQpgYGA=ECODDECNEF
+</div></script></section><section data-separator="?
+---?
+" data-separator-vertical="?
+--?
+" data-separator-notes="note:" data-markdown><script type="text/template"><!-- .slide: class="drop" template="" -->
+<div class="" style="position: absolute; left: 0px; top: 0px; height: 700px; width: 960px; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center" absolute="true">
+
+### Demonstração - `wipe`
+
+<img src="assets/duress/duress-demo-wipe.gif" alt="duress wipe demo" style="object-fit: scale-down">
+</div></script></section><section data-separator="?
+---?
+" data-separator-vertical="?
+--?
+" data-separator-notes="note:" data-markdown><script type="text/template"><!-- .slide: class="drop" template="" -->
+<div class="" style="position: absolute; left: 0px; top: 0px; height: 700px; width: 960px; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center" absolute="true">
+
+### Demonstração - `boot`
+
+<img src="assets/duress/duress-demo-decoy.gif" alt="duress decoy boot demo" style="object-fit: scale-down">
+</div></script></section><section data-separator="?
+---?
+" data-separator-vertical="?
+--?
+" data-separator-notes="note:" data-markdown><script type="text/template"><!-- .slide: class="drop" template="" -->
+<div class="" style="position: absolute; left: 0px; top: 0px; height: 700px; width: 960px; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center" absolute="true">
+
+### Demonstração - `wipe`+`boot`
+
+<img src="assets/duress/duress-demo-torvalds.gif" alt="duress wipe+decoy boot demo" style="object-fit: scale-down">
+</div></script></section><section data-separator="?
+---?
+" data-separator-vertical="?
+--?
+" data-separator-notes="note:" data-markdown><script type="text/template"><!-- .slide: class="drop" template="" -->
+<div class="" style="position: absolute; left: 0px; top: 0px; height: 700px; width: 960px; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center" absolute="true">
+
+#### Feature: senhas múltiplas com LUKS 
+
+<img src="assets/duress/luks-headers.excalidraw.png" alt="LUKS headers on disk" style="object-fit: scale-down">
+</div></script></section><section data-separator="?
+---?
+" data-separator-vertical="?
+--?
+" data-separator-notes="note:" data-markdown><script type="text/template"><!-- .slide: class="drop" template="" -->
+<div class="" style="position: absolute; left: 0px; top: 0px; height: 700px; width: 960px; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center" absolute="true">
+
+#### Limitação: kernel compartilhado
+
+FENCEDCODEmermaid:1:YGBgbWVybWFpZApmbG93Y2hhcnQgTFIKICAgIHN1YmdyYXBoIEZpcm13YXJlCiAgICAgICAgVUVGSSgiVUVGSSIpCiAgICBlbmQKCiAgICBzdWJncmFwaCBFU1AKICAgICAgICBCb290bG9hZGVyKCJCb290IGxvYWRlciIpCiAgICBlbmQKCiAgICBzdWJncmFwaCBib290ZnMgWyJQYXJ0acOnw6NvIGRlIEJvb3QiXQogICAgICAgIEluaXRyZCgia2VybmVsK2luaXRyZCIpCiAgICBlbmQKCiAgICBzdWJncmFwaCByb290ZnMyIFsiICJdCiAgICAgICAgVXNlcnNwYWNlMigiU2lzdGVtYSBCIikKICAgIGVuZAogICAgc3ViZ3JhcGggcm9vdGZzMSBbIiAiXQogICAgICAgIFVzZXJzcGFjZTEoIlNpc3RlbWEgQSIpCiAgICBlbmQKCiAgICBVRUZJIC0tPiBCb290bG9hZGVyIC0tPiBJbml0cmQgLS0+IHJvb3RmczEgJiByb290ZnMyCgogICAgc3R5bGUgSW5pdHJkIHN0cm9rZTojZmZiODZjLHN0cm9rZS13aWR0aDoycHg7CiAgICBzdHlsZSByb290ZnMxIHN0cm9rZTojZWE3MWI4LHN0cm9rZS13aWR0aDoycHg7CiAgICBzdHlsZSByb290ZnMyIHN0cm9rZTojZWE3MWI4LHN0cm9rZS13aWR0aDoycHg7CmBgYA==ECODDECNEF
+</div></script></section><section data-separator="?
+---?
+" data-separator-vertical="?
+--?
+" data-separator-notes="note:" data-markdown><script type="text/template"><!-- .slide: class="drop" template="" -->
+<div class="" style="position: absolute; left: 0px; top: 0px; height: 700px; width: 960px; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center" absolute="true">
+
+### Open Source
+
+<img src="assets/duress/qr-gh-baioc-duress-boot.png" alt="QR code" style="object-fit: scale-down">
+
+
+- [github.com/baioc/duress-boot](https://github.com/baioc/duress-boot/)
+</div></script></section><section data-separator="?
+---?
+" data-separator-vertical="?
+--?
+" data-separator-notes="note:" data-markdown><script type="text/template"><!-- .slide: class="drop" template="" -->
+<div class="" style="position: absolute; left: 0px; top: 0px; height: 700px; width: 960px; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center" absolute="true">
+
+## Sumário
+
+1. Introdução ao problema de coação
+2. Boot do Linux e criptografia LUKS
+3. Implementando um "*duress boot*"
+4. **Analisando modelos de ameaça**
+</div></script></section><section data-separator="?
+---?
+" data-separator-vertical="?
+--?
+" data-separator-notes="note:" data-markdown><script type="text/template"><!-- .slide: class="drop" template="" -->
+<div class="" style="position: absolute; left: 0px; top: 0px; height: 700px; width: 960px; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center" absolute="true">
+
+### Caracterizando adversários
+
+| **Características**/`Adversários` | `A` | `B` | `C` | `D` | 
+|-----------------------------------|-----|-----|-----|-----|
+| **Capacidade de coação**          | ✅  | ✅  | ✅  | ✅  |
+| **Habilidade técnica / forense**  | ❌  | ✅  | ❌  | ✅  |
+| **Obediência escala a situação**  | ❌  | ❌  | ✅  | ✅  |
+</div></script></section><section data-separator="?
+---?
+" data-separator-vertical="?
+--?
+" data-separator-notes="note:" data-markdown><script type="text/template"><!-- .slide: class="drop" template="" -->
+<div class="" style="position: absolute; left: 0px; top: 0px; height: 700px; width: 960px; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center" absolute="true">
+
+### Adversário tipo A
+
+<img src="assets/duress/dois-caras-numa-moto.png" alt="dois caras em uma moto" style="object-fit: scale-down">
+
+
+- Coação **sem habilidade técnica**
+- Obediência não escala a situaçao
+- Exemplo: assaltante
+    - Duress pin = 💀
+    - Perfil de decoy = ☺️
+</div></script></section><section data-separator="?
+---?
+" data-separator-vertical="?
+--?
+" data-separator-notes="note:" data-markdown><script type="text/template"><!-- .slide: class="drop" template="" -->
+<div class="" style="position: absolute; left: 0px; top: 0px; height: 700px; width: 960px; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center" absolute="true">
+
+### Adversários tipo B e D
+
+<img src="assets/duress/news-duress-felony-usa.png" alt="" style="width: 700px; height: 300px; object-fit: fill">
+
+
+- Coação **com habilidade técnica / forense**
+- Exemplo: forças da lei
+- Duress pin pode ser interpretado como **obstrução de justiça** e/ou **supressão de documentos**
+</div></script></section><section data-separator="?
+---?
+" data-separator-vertical="?
+--?
+" data-separator-notes="note:" data-markdown><script type="text/template"><!-- .slide: class="drop" template="" -->
+<div class="" style="position: absolute; left: 0px; top: 0px; height: 700px; width: 960px; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center" absolute="true">
+
+<img src="assets/duress/jonik-internet-wrapped.png" alt="" style="width: 600px; height: 600px; object-fit: fill">
+
+
+- Fonte: [jonikcartoons.blogspot.com](https://jonikcartoons.blogspot.com/2011/09/general-cartoons.html)
+</div></script></section><section data-separator="?
+---?
+" data-separator-vertical="?
+--?
+" data-separator-notes="note:" data-markdown><script type="text/template"><!-- .slide: class="drop" template="" -->
+<div class="" style="position: absolute; left: 0px; top: 0px; height: 700px; width: 960px; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center" absolute="true">
+
+### Adversário tipo C
+
+- Coação **sem habilidade técnica**
+- **Obediência piora a situação**
+
+<img src="assets/duress/mugs-wide.jpeg" alt="" style="width: 450px; height: 250px; object-fit: fill">
+
+
+- Exemplo 1: **agente de forças da lei** vs. criminosos
+- Exemplo 2: situação de **violência doméstica**
+- Exemplo 3: **ativistas** vs. governos autoritários
+</div></script></section><section data-separator="?
+---?
+" data-separator-vertical="?
+--?
+" data-separator-notes="note:" data-markdown><script type="text/template"><!-- .slide: class="drop" template="" -->
+<div class="" style="position: absolute; left: 0px; top: 0px; height: 700px; width: 960px; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center" absolute="true">
+
+<img src="assets/duress/news-lgbt-felony-saudi.png" alt="" style="width: 600px; height: 200px; object-fit: fill">
+
+
+<img src="assets/duress/news-communism-felony-poland.png" alt="" style="width: 400px; height: 450px; object-fit: fill">
+</div></script></section><section data-separator="?
+---?
+" data-separator-vertical="?
+--?
+" data-separator-notes="note:" data-markdown><script type="text/template"><!-- .slide: class="drop" template="" -->
+<div class="" style="position: absolute; left: 0px; top: 0px; height: 700px; width: 960px; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center" absolute="true">
+
+### Conclusão
+
+- *Duress pin* / senha de wipe ao bootar?
+    - **Pode piorar a situação**
+
+- Perfil falso / sistema de *decoy*?
+    - Funciona bem contra **adversários sem capacidade forense**
+
+- Alternativas?
+    - **Melhorias de OPSEC**
+    - *Deniable encryption*
+</div></script></section><section data-separator="?
+---?
+" data-separator-vertical="?
+--?
+" data-separator-notes="note:" data-markdown><script type="text/template"><!-- .slide: class="drop" template="" -->
+<div class="" style="position: absolute; left: 0px; top: 0px; height: 700px; width: 960px; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center" absolute="true">
+
+## Sumário
+
+1. Introdução ao problema de coação
+2. Boot do Linux e criptografia LUKS
+3. Implementando um "*duress boot*"
+4. Analisando modelos de ameaça
+</div></script></section><section data-separator="?
+---?
+" data-separator-vertical="?
+--?
+" data-separator-notes="note:" data-markdown><script type="text/template"><!-- .slide: class="drop" template="" -->
+<div class="" style="position: absolute; left: 0px; top: 0px; height: 700px; width: 960px; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center" absolute="true">
+
+### FIM
+
+- Obrigado!
+
+- **Perguntas?**
+
+- Feedback é sempre bem vindo!
+
+- [github.com/baioc/duress-boot](https://github.com/baioc/duress-boot/)
+</div></script></section></div>
+    </div>
+
+    <script src="dist/reveal.js"></script>
+    <script src="plugin/notes/notes.js"></script>
+    <script src="plugin/markdown/markdown.js"></script>
+    <script src="plugin/obsidian-markdown.js"></script>
+    <script src="plugin/highlight/highlight.js"></script>
+
+    <script src="plugin/zoom/zoom.js"></script>
+    <script src="plugin/math/math.js"></script>
+    <script src="plugin/mermaid/mermaid.js"></script>
+    <script src="plugin/chart/chart.umd.js"></script>
+    <script src="plugin/chart/plugin.js"></script>
+    <script src="plugin/customcontrols/plugin.js"></script>
+    <script src="plugin/reveal-pointer/pointer.js"></script>
+
+
+    <script>
+        function extend() {
+            const target = {};
+            for (let i = 0; i < arguments.length; i++) {
+                const source = arguments[i];
+                for (const key in source) {
+                    if (source.hasOwnProperty(key)) {
+                        target[key] = source[key];
+                    }
+                }
+            }
+            return target;
+        }
+
+        function isLight(color) {
+            // normalize to rgb(a)
+            const optionEl = document.createElement("option");
+            optionEl.style.color = color;
+            const normalizedColor = optionEl.style.color;
+
+            const match = normalizedColor.match(/(\d+), (\d+), (\d+)/);
+            if (!match) return false;
+            const [, c_r, c_g, c_b] = match;
+
+            const brightness = ((c_r * 299) + (c_g * 587) + (c_b * 114)) / 1000;
+            return brightness > 155;
+        }
+
+        const bgColor = getComputedStyle(document.documentElement).getPropertyValue('--r-background-color').trim();
+
+        if (isLight(bgColor)) {
+            document.body.classList.add('has-light-background');
+        } else {
+            document.body.classList.add('has-dark-background');
+        }
+
+        // default options to init reveal.js
+        const defaultOptions = {
+            controls: true,
+            progress: true,
+            history: true,
+            center: true,
+            transition: 'default', // none/fade/slide/convex/concave/zoom
+            plugins: [
+                ObsidianMarkdown,
+                RevealHighlight,
+                RevealZoom,
+                RevealNotes,
+                RevealMath.KaTeX,
+                RevealMermaid,
+                RevealChart,
+                RevealCustomControls,
+                RevealPointer,
+            ],
+            allottedTime: "120",
+
+            katex: {
+                local: 'plugin/math/katex',
+                extensions: ["mhchem"],
+            },
+            markdown: {
+                gfm: true,
+            },
+            mermaid: {
+                theme: isLight(bgColor) ? 'default' : 'dark',
+            },
+            customcontrols: {
+                controls: [
+                    {
+                        id: 'toggle-overview',
+                        title: 'Toggle overview (O)',
+                        icon: '<i class="fa fa-th"></i>',
+                        action: 'Reveal.toggleOverview();'
+                    },
+                ]
+            },
+        };
+
+        if ( pageInIframe() ) {
+            defaultOptions.scrollActivationWidth = 5;
+        }
+
+        // options from URL query string
+        const queryOptions = Reveal().getQueryHash() || {};
+
+        const options = extend(defaultOptions, {"controls":true,"progress":true,"slideNumber":true,"center":true,"transition":"slide","transitionSpeed":"fast","width":960,"height":700,"margin":0.04}, queryOptions);
+    </script>
+
+    <script>
+      /**
+       * KaTeX Equation Numbering Note
+       *
+       * KaTeX maintains a global equation counter for \begin{equation} environments.
+       * When navigating between slides, reveal.js math plugin may re-render math, causing
+       * equation numbers to change randomly.
+       *
+       * Note: Regular $$ blocks don't have equation numbers - only \begin{equation} does.
+       *
+       * If you experience issues with equation numbers changing:
+       * Use manual \tag{} commands: \begin{equation}\tag{1} ... \end{equation}
+       */
+
+      Reveal.initialize(options);
+    </script>
+    <!-- created with Slides Extended reveal.html template -->
+</body>
+</html>

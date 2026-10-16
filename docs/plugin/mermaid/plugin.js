@@ -1,0 +1,95 @@
+/*!
+ * reveal.js Mermaid plugin
+ */
+
+import mermaid from "mermaid/dist/mermaid.esm.mjs";
+
+function decodeHtml(html) {
+  var txt = document.createElement("textarea");
+  txt.innerHTML = html;
+  return txt.value;
+}
+
+function getInnerHtml(el) {
+  let contentEl = el;
+  const firstElementChild = el?.firstElementChild;
+  if (firstElementChild?.tagName?.toLowerCase() === "pre") {
+    contentEl = firstElementChild;
+  }
+  return contentEl?.innerHTML?.trim();
+}
+
+async function renderMermaid({ el, beforeRender, afterRender }) {
+  const beforeRenderRes = await beforeRender?.(el);
+
+  if (beforeRenderRes === false) {
+    return;
+  }
+
+  const html = getInnerHtml(el);
+  const graphDefinition = decodeHtml(html);
+
+  try {
+    const { svg: svgCode } = await mermaid.render(
+      `mermaid-${Math.random().toString(36).substring(2)}`,
+      graphDefinition,
+    );
+    el.innerHTML = svgCode;
+
+    await afterRender?.(el);
+  } catch (error) {
+    let errorStr = "";
+    if (error?.str) {
+      // From mermaid 9.1.4, error.message does not exists anymore
+      errorStr = error.str;
+    }
+    if (error?.message) {
+      errorStr = error.message;
+    }
+    console.error(errorStr, { error, graphDefinition, el });
+    el.innerHTML = errorStr;
+  }
+}
+
+function getRenderMermaidEl({ beforeRender, afterRender }) {
+  return function renderMermaidEl(el) {
+    return renderMermaid({
+      el,
+      beforeRender,
+      afterRender,
+    });
+  };
+}
+
+const Plugin = {
+  id: "mermaid",
+
+  init: function (reveal) {
+    const { ...mermaidConfig } = reveal.getConfig().mermaid || {};
+    const { ...mermaidPluginConfig } = reveal.getConfig().mermaidPlugin || {};
+
+    if (mermaidPluginConfig.iconPacks) {
+      mermaid.registerIconPacks(mermaidPluginConfig.iconPacks);
+    }
+
+    const renderMermaidEl = getRenderMermaidEl({
+      beforeRender: mermaidPluginConfig.beforeRender,
+      afterRender: mermaidPluginConfig.afterRender,
+    });
+
+    mermaid.initialize({
+      // The node size will be calculated incorrectly if set `startOnLoad: start`,
+      // so we need to manually render.
+      startOnLoad: false,
+      ...mermaidConfig,
+    });
+
+    const mermaidEls = reveal.getRevealElement().querySelectorAll(".mermaid");
+
+    Array.from(mermaidEls).forEach(function (el) {
+      renderMermaidEl(el);
+    });
+  },
+};
+
+export default () => Plugin;
